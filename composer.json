@@ -1,0 +1,43 @@
+{
+    "name": "synergitech/laravel-salesforce",
+    "description": "This package uses omniphx/forrest to provide an Eloquent-style way of querying sObjects from Salesforce.",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "salesforce"
+    ],
+    "require": {
+        "php": "^8.0",
+        "illuminate/collections": "^8.0 || ^9.0 || ^10.0",
+        "illuminate/support": "^8.0 || ^9.0 || ^10.0",
+        "omniphx/forrest": "^2.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0 || ^7.0 || ^8.0",
+        "php-parallel-lint/php-parallel-lint": "^1.3",
+        "phpstan/phpstan": "^1",
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "SynergiTech\\Salesforce\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "aliases": {
+                "Salesforce": "SynergiTech\\Salesforce\\Facades\\Salesforce"
+            }
+        }
+    },
+    "scripts": {
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "XDEBUG_MODE=coverage phpunit tests",
+            "parallel-lint --exclude vendor .",
+            "phpcs --standard=PSR12 src/ tests/",
+            "phpstan analyse --level 9 src"
+        ]
+    }
+}
