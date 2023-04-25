@@ -58,6 +58,9 @@ class TableService extends Builder
         return $response->records;
     }
 
+    /**
+     * Execute the query and retrieve available objects in a response
+     */
     public function get(): Response
     {
         try {
@@ -69,6 +72,11 @@ class TableService extends Builder
         }
     }
 
+    /**
+     * Create a record in the Salesforce table with the specified data
+     * 
+     * @return array<string, mixed>|false
+     */
     public function create(array $data = []): array|false
     {
         try {
@@ -89,21 +97,23 @@ class TableService extends Builder
         return false;
     }
 
-    public function update(string $id, array $data)
+    /**
+     * Update a record with the specified Id in Salesforce with the provided data
+     * 
+     * @return array<string, mixed>|false
+     */
+    public function update(string $id, array $data): array|false
     {
         try {
-            $response = Forrest::sobjects(implode('/', [
+            Forrest::sobjects(implode('/', [
                 $this->table,
                 $id,
             ]), [
-                'method' => 'put',
+                'method' => 'patch',
                 'body' => $data,
             ]);
 
-            if ($response['success'] ?? false) {
-                $response['data'] = $this->find($response['id']);
-                return $response;
-            }
+            return $this->find($id);
         } catch (SalesforceException $ex) {
             $this->throwException($ex);
             throw $ex;
@@ -112,7 +122,12 @@ class TableService extends Builder
         return false;
     }
 
-    public function createOrUpdate(string $field, string $id, array $data = []): array
+    /**
+     * Upsert a record using the specified external Id field and Id with the provided data
+     * 
+     * @return array<string, mixed>|false
+     */
+    public function createOrUpdate(string $field, string $id, array $data = []): array|false
     {
         try {
             $response = Forrest::sobjects(implode('/', [
@@ -136,6 +151,11 @@ class TableService extends Builder
         return false;
     }
 
+    /**
+     * Delete a record on the table using the specified Id
+     * 
+     * @return bool
+     */
     public function delete(string $id): bool
     {
         try {
