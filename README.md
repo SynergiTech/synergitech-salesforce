@@ -26,6 +26,8 @@ Allows you to directly pull an individual record as an array by Id.
 You can also specify another field name as the second parameter.
 If you specify a non-unique column and multiple records are returned then the first record is always returned.
 
+#### Usage
+
 ```php
 Salesforce::table('MyTable')->find('YourIdHere');
 ```
@@ -35,9 +37,93 @@ Salesforce::table('MyTable')->find('YourIdHere');
 Allows you to directly pull multiple records as a Laravel Collection by provide an array of their respective Id fields.
 You can also specify another field name as the second parameter.
 
+#### Usage
+
 ```php
 Salesforce::table('MyTable')->findMany(['YourId1Here', 'YourId2Here']);
 ```
+
+### create
+
+Allows you to create a new record on the specified table using an array of fields.
+
+#### Usage
+
+```php
+$response = Salesforce::table('MyTable')->create([
+    'Name' => 'John Doe',
+]);
+```
+
+#### Expected Response
+
+```php
+[
+    'id' => '', // Salesforce Id
+    'success' => true,
+    'errors' => [],
+    'data' => [
+        // Full record data
+    ],
+]
+```
+
+### update
+
+Allows you to update a record using it's Salesforce Id with an array of fields.
+
+#### Usage
+
+```php
+$response = Salesforce::table('MyTable')->update('Id', [
+    'Name' => 'John Doe',
+]);
+```
+
+#### Expected Response
+
+See 'create' above
+
+### createOrUpdate
+
+Allows you to upsert a record using an Id field and the associated value.
+
+#### Usage
+
+```php
+$response = Salesforce::table('MyTable')->createOrUpdate('My_External_Id__c', 'ExternalId', [
+    'Name' => 'John Doe',
+]);
+```
+
+#### Expected Response
+
+```php
+[
+    'id' => '', // Salesforce Id
+    'success' => true,
+    'errors' => [],
+    'created' => true, // True/False depending on whether the record was created or updated
+    'data' => [
+        // Full record data
+    ],
+]
+```
+
+### delete
+
+Allows you to delete a record by it's Id, returning true if successful.
+
+#### Usage
+
+```php
+Salesforce::table('MyTable')->delete('Id');
+```
+
+## Query Builder
+
+This package allows you to scope your get calls using query builder methods.
+Query builders **cannot** currently be used in conjunction with the `update` or `delete` methods (sorry 🙏).
 
 ### where
 
@@ -105,4 +191,4 @@ Salesforce::table('MyTable')->where('Name', 'LIKE', 'John%')->limit(20)->get();
 ## Exceptions
 
 By default [omniphx/forrest](https://github.com/omniphx/forrest) typically throws a single exception with more detail contained within a JSON encoded string.
-We've wrapped a couple with our own exceptions to help with debugging.
+We've wrapped a fair few with our own exceptions to help with debugging.
