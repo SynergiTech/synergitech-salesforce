@@ -5,9 +5,14 @@ namespace SynergiTech\Salesforce\Services;
 use Illuminate\Support\Collection;
 use Omniphx\Forrest\Exceptions\SalesforceException;
 use Omniphx\Forrest\Providers\Laravel\Facades\Forrest;
+use stdClass;
+use SynergiTech\Salesforce\Exceptions\EntityIsDeletedException;
+use SynergiTech\Salesforce\Exceptions\InvalidCrossReferenceKeyException;
 use SynergiTech\Salesforce\Exceptions\InvalidFieldException;
+use SynergiTech\Salesforce\Exceptions\MalformedIdException;
 use SynergiTech\Salesforce\Exceptions\MalformedQueryException;
 use SynergiTech\Salesforce\Exceptions\NotFoundException;
+use SynergiTech\Salesforce\Exceptions\RequiredFieldMissingException;
 use SynergiTech\Salesforce\Models\Builder;
 use SynergiTech\Salesforce\Models\Response;
 
@@ -47,7 +52,7 @@ class TableService extends Builder
         $response = $this->get();
 
         if ($response->records->count() === 0) {
-            throw new NotFoundException("No records with the specified IDs could be found");
+            throw new NotFoundException("No record(s) with the specified ID(s) could be found");
         }
 
         return $response->records;
@@ -59,25 +64,134 @@ class TableService extends Builder
             $query = $this->getQuery();
             return new Response($query, Forrest::query($query));
         } catch (SalesforceException $ex) {
-            $message = $ex->getMessage();
-            /** @var array<mixed> $errors */
-            $errors = json_decode($message);
-            /** @var \stdClass{errorCode:string, message:string} $error */
-            $error = $errors[0];
-
-            if (property_exists($error, 'errorCode')) {
-                $message = $this->formatErrorMessage($error->message);
-
-                switch ($error->errorCode) {
-                    case 'MALFORMED_QUERY':
-                        throw new MalformedQueryException($message);
-                    case 'INVALID_QUERY_FILTER_OPERATOR':
-                        throw new InvalidFieldException($message);
-                }
-            }
-
+            $this->throwException($ex);
             throw $ex;
         }
+    }
+
+    public function create(array $data = []): array|false
+    {
+        try {
+            $response = Forrest::sobjects($this->table, [
+                'method' => 'post',
+                'body' => $data,
+            ]);
+
+            if ($response['success'] ?? false) {
+                $response['data'] = $this->find($response['id']);
+                return $response;
+            }
+        } catch (SalesforceException $ex) {
+            $this->throwException($ex);
+            throw $ex;
+        }
+
+        return false;
+    }
+
+    public function update(string $id, array $data)
+    {
+        try {
+            $response = Forrest::sobjects(implode('/', [
+                $this->table,
+                $id,
+            ]), [
+                'method' => 'put',
+                'body' => $data,
+            ]);
+
+            if ($response['success'] ?? false) {
+                $response['data'] = $this->find($response['id']);
+                return $response;
+            }
+        } catch (SalesforceException $ex) {
+            $this->throwException($ex);
+            throw $ex;
+        }
+        
+        return false;
+    }
+
+    public function createOrUpdate(string $field, string $id, array $data = []): array
+    {
+        try {
+            $response = Forrest::sobjects(implode('/', [
+                $this->table,
+                $field,
+                $id,
+            ]), [
+                'method' => 'patch',
+                'body' => $data,
+            ]);
+
+            if ($response['success'] ?? false) {
+                $response['data'] = $this->find($response['id']);
+                return $response;
+            }
+        } catch (SalesforceException $ex) {
+            $this->throwException($ex);
+            throw $ex;
+        }
+
+        return false;
+    }
+
+    public function delete(string $id): bool
+    {
+        try {
+            Forrest::sobjects(implode('/', [
+                $this->table,
+                $id,
+            ]), [
+                'method' => 'delete',
+            ]);
+            return true;
+        } catch (SalesforceException $ex) {
+            $this->throwException($ex);
+            throw $ex;
+        }
+
+        return false;
+    }
+
+    protected function throwException(SalesforceException $ex): void
+    {
+        $error = $this->decodeError($ex);
+
+        if (property_exists($error, 'errorCode')) {
+            $message = $this->formatErrorMessage($error->message);
+
+            switch ($error->errorCode) {
+                case 'ENTITY_IS_DELETED':
+                    throw new EntityIsDeletedException($message);
+                case 'INVALID_CROSS_REFERENCE_KEY':
+                    throw new InvalidCrossReferenceKeyException($message);
+                case 'INVALID_ID_FIELD':
+                    throw new InvalidFieldException($message);
+                case 'INVALID_QUERY_FILTER_OPERATOR':
+                    throw new InvalidFieldException($message);
+                case 'REQUIRED_FIELD_MISSING':
+                    throw new RequiredFieldMissingException($message);
+                case 'MALFORMED_QUERY':
+                    throw new MalformedQueryException($message);
+                case 'MALFORMED_ID':
+                    throw new MalformedIdException($message);
+                case 'NOT_FOUND':
+                    throw new NotFoundException($message);
+            }
+        }
+    }
+
+    /**
+     * @return stdClass{errorCode:string, message:string}
+     */
+    protected function decodeError(SalesforceException $ex): stdClass
+    {
+        $message = $ex->getMessage();
+        /** @var array<mixed> $errors */
+        $errors = json_decode($message);
+        /** @var stdClass{errorCode:string, message:string} $error */
+        return $errors[0];
     }
 
     protected function formatErrorMessage(string $message): string
