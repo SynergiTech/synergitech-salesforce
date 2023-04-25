@@ -74,7 +74,8 @@ class TableService extends Builder
 
     /**
      * Create a record in the Salesforce table with the specified data
-     * 
+     *
+     * @param array<string, mixed> $data
      * @return array<string, mixed>|false
      */
     public function create(array $data = []): array|false
@@ -99,10 +100,11 @@ class TableService extends Builder
 
     /**
      * Update a record with the specified Id in Salesforce with the provided data
-     * 
-     * @return array<string, mixed>|false
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
      */
-    public function update(string $id, array $data): array|false
+    public function update(string $id, array $data): array
     {
         try {
             Forrest::sobjects(implode('/', [
@@ -118,13 +120,12 @@ class TableService extends Builder
             $this->throwException($ex);
             throw $ex;
         }
-        
-        return false;
     }
 
     /**
      * Upsert a record using the specified external Id field and Id with the provided data
-     * 
+     *
+     * @param array<string, mixed> $data
      * @return array<string, mixed>|false
      */
     public function createOrUpdate(string $field, string $id, array $data = []): array|false
@@ -153,7 +154,7 @@ class TableService extends Builder
 
     /**
      * Delete a record on the table using the specified Id
-     * 
+     *
      * @return bool
      */
     public function delete(string $id): bool
@@ -170,8 +171,6 @@ class TableService extends Builder
             $this->throwException($ex);
             throw $ex;
         }
-
-        return false;
     }
 
     protected function throwException(SalesforceException $ex): void
