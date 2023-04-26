@@ -2,6 +2,7 @@
 
 namespace SynergiTech\Salesforce\Services;
 
+use Exception;
 use Illuminate\Support\Collection;
 use Omniphx\Forrest\Exceptions\SalesforceException;
 use Omniphx\Forrest\Providers\Laravel\Facades\Forrest;
@@ -9,6 +10,7 @@ use stdClass;
 use SynergiTech\Salesforce\Exceptions\EntityIsDeletedException;
 use SynergiTech\Salesforce\Exceptions\InvalidCrossReferenceKeyException;
 use SynergiTech\Salesforce\Exceptions\InvalidFieldException;
+use SynergiTech\Salesforce\Exceptions\JsonParseErrorException;
 use SynergiTech\Salesforce\Exceptions\MalformedIdException;
 use SynergiTech\Salesforce\Exceptions\MalformedQueryException;
 use SynergiTech\Salesforce\Exceptions\NotFoundException;
@@ -67,8 +69,7 @@ class TableService extends Builder
             $query = $this->getQuery();
             return new Response($query, Forrest::query($query));
         } catch (SalesforceException $ex) {
-            $this->throwException($ex);
-            throw $ex;
+            throw $this->wrapException($ex);
         }
     }
 
@@ -91,8 +92,7 @@ class TableService extends Builder
                 return $response;
             }
         } catch (SalesforceException $ex) {
-            $this->throwException($ex);
-            throw $ex;
+            throw $this->wrapException($ex);
         }
 
         return false;
@@ -117,8 +117,7 @@ class TableService extends Builder
 
             return $this->find($id);
         } catch (SalesforceException $ex) {
-            $this->throwException($ex);
-            throw $ex;
+            throw $this->wrapException($ex);
         }
     }
 
@@ -145,8 +144,7 @@ class TableService extends Builder
                 return $response;
             }
         } catch (SalesforceException $ex) {
-            $this->throwException($ex);
-            throw $ex;
+            throw $this->wrapException($ex);
         }
 
         return false;
@@ -168,12 +166,11 @@ class TableService extends Builder
             ]);
             return true;
         } catch (SalesforceException $ex) {
-            $this->throwException($ex);
-            throw $ex;
+            throw $this->wrapException($ex);
         }
     }
 
-    protected function throwException(SalesforceException $ex): void
+    protected function wrapException(SalesforceException $ex): Exception
     {
         $error = $this->decodeError($ex);
 
@@ -182,23 +179,25 @@ class TableService extends Builder
 
             switch ($error->errorCode) {
                 case 'ENTITY_IS_DELETED':
-                    throw new EntityIsDeletedException($message);
+                    return new EntityIsDeletedException($message);
                 case 'INVALID_CROSS_REFERENCE_KEY':
-                    throw new InvalidCrossReferenceKeyException($message);
+                    return new InvalidCrossReferenceKeyException($message);
                 case 'INVALID_ID_FIELD':
-                    throw new InvalidFieldException($message);
+                    return new InvalidFieldException($message);
                 case 'INVALID_QUERY_FILTER_OPERATOR':
-                    throw new InvalidFieldException($message);
+                    return new InvalidFieldException($message);
                 case 'REQUIRED_FIELD_MISSING':
-                    throw new RequiredFieldMissingException($message);
+                    return new RequiredFieldMissingException($message);
                 case 'MALFORMED_QUERY':
-                    throw new MalformedQueryException($message);
+                    return new MalformedQueryException($message);
                 case 'MALFORMED_ID':
-                    throw new MalformedIdException($message);
+                    return new MalformedIdException($message);
                 case 'NOT_FOUND':
-                    throw new NotFoundException($message);
+                    return new NotFoundException($message);
             }
         }
+
+        return $ex;
     }
 
     /**
@@ -207,8 +206,13 @@ class TableService extends Builder
     protected function decodeError(SalesforceException $ex): stdClass
     {
         $message = $ex->getMessage();
-        /** @var array<mixed> $errors */
+        /** @var array<mixed>|false $errors */
         $errors = json_decode($message);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new JsonParseErrorException('Error message received was not valid json. Message: ' . $message);
+        }
+
         /** @var stdClass{errorCode:string, message:string} $error */
         return $errors[0];
     }
