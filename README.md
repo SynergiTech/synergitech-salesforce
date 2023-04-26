@@ -191,4 +191,4 @@ Salesforce::table('MyTable')->where('Name', 'LIKE', 'John%')->limit(20)->get();
 ## Exceptions
 
 By default [omniphx/forrest](https://github.com/omniphx/forrest) typically throws a single exception with more detail contained within a JSON encoded string.
-We've wrapped a fair few with our own exceptions to help with debugging.
+We've wrapped some with our own exceptions to help with debugging.
