@@ -11,20 +11,17 @@ class SalesforceService
 {
     public static function table(string $tableName): TableService
     {
-        /** @var \Illuminate\Config\Repository $config */
-        $config = app('config');
-        /** @var \Illuminate\Cache\CacheManager $cacheManager */
-        $cacheManager = app('cache');
-        $cache = new LaravelCache($config, $cacheManager->store());
-
-        if (!$cache->has('token')) {
-            self::authenticate();
-        }
+        self::authenticate();
         return new TableService($tableName);
     }
 
-    protected static function authenticate(): void
+    protected static function authenticate(bool $force = false): void
     {
+        /** @var LaravelCache $cache */
+        $cache = app(LaravelCache::class);
+        if (!$force && $cache->has('token')) {
+            return;
+        }
         try {
             Forrest::authenticate();
         } catch (Exception $ex) {
