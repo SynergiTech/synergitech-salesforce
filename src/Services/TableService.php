@@ -213,7 +213,7 @@ class TableService extends Builder
             throw new JsonParseErrorException('Error message received was not valid json. Message: ' . $message);
         }
 
-        if (!$errors || !count($errors)) {
+        if (!$errors) {
             throw $ex;
         }
 
