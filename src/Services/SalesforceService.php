@@ -11,7 +11,11 @@ class SalesforceService
 {
     public static function table(string $tableName): TableService
     {
-        $cache = new LaravelCache(app('config'), app('cache')->store());
+        /** @var \Illuminate\Config\Repository $config */
+        $config = app('config');
+        /** @var \Illuminate\Cache\CacheManager $cacheManager */
+        $cacheManager = app('cache');
+        $cache = new LaravelCache($config, $cacheManager->store());
 
         if (!$cache->has('token')) {
             self::authenticate();
